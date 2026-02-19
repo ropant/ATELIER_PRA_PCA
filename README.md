@@ -230,28 +230,35 @@ Faites preuve de pédagogie et soyez clair dans vos explications et procedures d
 
 **Exercice 1 :**  
 Quels sont les composants dont la perte entraîne une perte de données ?  
-  
-*..Répondez à cet exercice ici..*
+ 
+La perte du PVC pra-data entraîne une perte de données car il contient la base SQLite.
+Les pods et le deployment peuvent être supprimés sans impact sur les données.
 
 **Exercice 2 :**  
 Expliquez nous pourquoi nous n'avons pas perdu les données lors de la supression du PVC pra-data  
   
-*..Répondez à cet exercice ici..*
+Pourquoi n’avons-nous pas perdu les données lors de la suppression du pod ?
+Les données sont stockées dans un volume persistant (PVC) indépendant du pod.
+Kubernetes recrée le pod automatiquement et rattache le même volume.
 
 **Exercice 3 :**  
 Quels sont les RTO et RPO de cette solution ?  
   
-*..Répondez à cet exercice ici..*
+Quels sont les RTO et RPO de cette solution ?
+Le RPO est d’environ 1 minute (fréquence du CronJob de sauvegarde).
+Le RTO correspond au temps d’intervention humaine + restauration (quelques minutes).
 
 **Exercice 4 :**  
 Pourquoi cette solution (cet atelier) ne peux pas être utilisé dans un vrai environnement de production ? Que manque-t-il ?   
-  
-*..Répondez à cet exercice ici..*
+  Pourquoi cette solution n’est pas utilisable en production ? Que manque-t-il ?
+Le stockage est local non répliqué, sans haute disponibilité ni sauvegarde externe.
+Il manque une base de données adaptée, réplication, sécurité et automatisation du PRA
   
 **Exercice 5 :**  
 Proposez une archtecture plus robuste.   
-  
-*..Répondez à cet exercice ici..*
+Proposer une architecture plus robuste
+Utiliser une base de données externe répliquée (PostgreSQL, MySQL) et un stockage distribué.
+Ajouter des backups hors cluster, monitoring et restauration automatisée.
 
 ---------------------------------------------------
 Séquence 6 : Ateliers  
