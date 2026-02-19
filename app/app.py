@@ -1,9 +1,11 @@
 import os
 import sqlite3
+import time
 from datetime import datetime
 from flask import Flask, jsonify, request
 
 DB_PATH = os.getenv("DB_PATH", "/data/app.db")
+BACKUP_DIR = "/backup"
 
 app = Flask(__name__)
 
@@ -31,7 +33,6 @@ def init_db():
 def hello():
     init_db()
     return jsonify(status="Bonjour tout le monde !")
-
 
 @app.get("/health")
 def health():
@@ -74,7 +75,6 @@ def consultation():
     ]
 
     conn.close()
-
     return jsonify(rows)
 
 @app.get("/count")
@@ -87,6 +87,39 @@ def count():
     conn.close()
 
     return jsonify(count=n)
+
+# ---------- ATELIER 1 : /status ----------
+@app.get("/status")
+def status():
+    init_db()
+
+    # 1) Nombre d'événements en base
+    conn = get_conn()
+    cur = conn.execute("SELECT COUNT(*) FROM events")
+    count = cur.fetchone()[0]
+    conn.close()
+
+    # 2) Dernier backup et âge
+    last_backup_file = None
+    backup_age_seconds = None
+
+    if os.path.isdir(BACKUP_DIR):
+        backups = [
+            os.path.join(BACKUP_DIR, f)
+            for f in os.listdir(BACKUP_DIR)
+            if f.endswith(".db")
+        ]
+
+        if backups:
+            latest = max(backups, key=os.path.getmtime)
+            last_backup_file = os.path.basename(latest)
+            backup_age_seconds = int(time.time() - os.path.getmtime(latest))
+
+    return jsonify({
+        "count": count,
+        "last_backup_file": last_backup_file,
+        "backup_age_seconds": backup_age_seconds
+    })
 
 # ---------- Main ----------
 if __name__ == "__main__":
