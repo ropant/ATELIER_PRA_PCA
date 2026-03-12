@@ -1,0 +1,47 @@
+# Job de restauration selective — Atelier 2
+# Utilisation : remplacer BACKUP_FILE par le nom du fichier a restaurer
+# Exemple : kubectl -n pra create job restore-select --from=job/sqlite-restore-select
+# Ou modifier directement la valeur de BACKUP_FILE ci-dessous
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sqlite-restore-select
+  namespace: pra
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: restore
+          image: alpine
+          env:
+            - name: BACKUP_FILE
+              value: "REMPLACER_PAR_LE_NOM_DU_BACKUP"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "=== Restauration selective ==="
+              # Verifier que le fichier de backup existe
+              if [ ! -f "/backup/$BACKUP_FILE" ]; then
+                echo "ERREUR : le fichier /backup/$BACKUP_FILE n'existe pas"
+                echo "Backups disponibles :"
+                ls -lt /backup/*.db
+                exit 1
+              fi
+              # Arreter l'acces a la base pendant la restauration
+              echo "Restauration de /backup/$BACKUP_FILE vers /data/app.db"
+              cp "/backup/$BACKUP_FILE" /data/app.db
+              echo "Restauration terminee avec succes"
+              ls -la /data/app.db
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: backup
+              mountPath: /backup
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: pra-data
+        - name: backup
+          persistentVolumeClaim:
+            claimName: pra-backup
