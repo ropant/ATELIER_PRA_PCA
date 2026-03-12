@@ -121,6 +121,35 @@ def status():
         "backup_age_seconds": backup_age_seconds
     })
 
+# ---------- ATELIER 2 : /backups ----------
+@app.get("/backups")
+def backups():
+    """Liste tous les points de restauration disponibles dans /backup"""
+    if not os.path.isdir(BACKUP_DIR):
+        return jsonify({"error": "Aucun repertoire de backup trouve", "backups": []})
+
+    # Recuperer tous les fichiers .db dans le repertoire de backup
+    fichiersBackup = []
+    for f in os.listdir(BACKUP_DIR):
+        if f.endswith(".db"):
+            cheminComplet = os.path.join(BACKUP_DIR, f)
+            tailleFichier = os.path.getsize(cheminComplet)
+            dateModification = os.path.getmtime(cheminComplet)
+            fichiersBackup.append({
+                "filename": f,
+                "size_bytes": tailleFichier,
+                "date": datetime.utcfromtimestamp(dateModification).isoformat() + "Z",
+                "age_seconds": int(time.time() - dateModification)
+            })
+
+    # Trier par date (le plus recent en premier)
+    fichiersBackup.sort(key=lambda x: x["age_seconds"])
+
+    return jsonify({
+        "total": len(fichiersBackup),
+        "backups": fichiersBackup
+    })
+
 # ---------- Main ----------
 if __name__ == "__main__":
     init_db()
