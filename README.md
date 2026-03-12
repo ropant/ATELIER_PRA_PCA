@@ -276,7 +276,64 @@ Difficulté : Moyenne (~2 heures)
 ### **Atelier 2 : Choisir notre point de restauration**  
 Aujourd’hui nous restaurobs “le dernier backup”. Nous souhaitons **ajouter la capacité de choisir un point de restauration**.
 
-*..Décrir ici votre procédure de restauration (votre runbook)..*  
+#### Runbook : Restauration a partir d'un point de restauration choisi
+
+**Etape 1 — Identifier les points de restauration disponibles**
+
+Depuis l'application Flask, acceder a la route `/backups` qui liste tous les backups disponibles avec leur nom, date et taille :
+```
+curl https://...votre-url.../backups
+```
+Resultat JSON exemple :
+```json
+{
+  "total": 15,
+  "backups": [
+    {"filename": "app-20260219-1430.db", "date": "2026-02-19T14:30:00Z", "size_bytes": 8192, "age_seconds": 120},
+    {"filename": "app-20260219-1429.db", "date": "2026-02-19T14:29:00Z", "size_bytes": 8192, "age_seconds": 180}
+  ]
+}
+```
+
+**Etape 2 — Arreter le deploiement et les sauvegardes**
+
+Avant de restaurer, on arrete le pod et le CronJob pour eviter les ecritures concurrentes :
+```
+kubectl -n pra scale deployment flask --replicas=0
+kubectl -n pra patch cronjob sqlite-backup -p '{"spec":{"suspend":true}}'
+```
+
+**Etape 3 — Modifier le job de restauration selective avec le backup choisi**
+
+Editer le fichier `pra/51-job-restore-select.yaml` et remplacer la valeur de `BACKUP_FILE` par le nom du fichier choisi a l'etape 1 :
+```yaml
+env:
+  - name: BACKUP_FILE
+    value: "app-20260219-1429.db"
+```
+
+**Etape 4 — Supprimer l'ancien job s'il existe et lancer la restauration**
+```
+kubectl -n pra delete job sqlite-restore-select --ignore-not-found
+kubectl apply -f pra/51-job-restore-select.yaml
+```
+
+**Etape 5 — Verifier que la restauration s'est bien passee**
+```
+kubectl -n pra logs job/sqlite-restore-select
+```
+On doit voir : `Restauration terminee avec succes`
+
+**Etape 6 — Redemarrer le deploiement et les sauvegardes**
+```
+kubectl -n pra scale deployment flask --replicas=1
+kubectl -n pra patch cronjob sqlite-backup -p '{"spec":{"suspend":false}}'
+kubectl -n pra port-forward svc/flask 8080:80 >/tmp/web.log 2>&1 &
+```
+
+**Etape 7 — Valider en ligne**
+
+Acceder a `/consultation` pour verifier que les donnees correspondent bien au point de restauration choisi.
   
 ---------------------------------------------------
 Evaluation
